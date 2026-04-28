@@ -6,59 +6,57 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 from fastapi import FastAPI
 
-# 1. 설정
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 OWNER_ID = 7958659939
 
-# 2. FastAPI 앱 생성
 app = FastAPI()
-telegram_app = None
 
-# 3. 서버 시작 시 봇 실행
 @app.on_event("startup")
 async def startup_event():
-    global telegram_app
-    print("⚫️ Ø𝗫•Σ𝗩𝗤†∆ SERVER IS RUNNING.")
+    print("⚫️ 𝗡Ø𝗫•Σ𝗩𝗤†∆ SERVER IS RUNNING.")
     
-    telegram_app = Application.builder().token(BOT_TOKEN).build()
-    telegram_app.add_handler(CommandHandler("start", start_command))
-    telegram_app.add_handler(CommandHandler("현재시간", time_command))
+    # 봇 생성
+    application = Application.builder().token(BOT_TOKEN).build()
+    application.add_handler(CommandHandler("start", start_command))
+    application.add_handler(CommandHandler("현재시간", time_command))
     
-    print("⚫️ Ø𝗫•Σ𝗤†∆ IS RUNNING NORMALLY.")
+    print("⚫️ 𝗡Ø𝗫•Σ𝗩𝗤†∆ IS RUNNING NORMALLY.")
     
-    # PTB v20+ 공식 권장: 백그라운드 태스크로 polling 실행
-    asyncio.create_task(telegram_app.run_polling(drop_pending_updates=True))
+    # 백그라운드에서 polling 실행 (PTB 20.6 권장 방식)
+    asyncio.create_task(run_bot(application))
 
-# 4. UptimeRobot 상태 확인
+async def run_bot(application):
+    """텔레그램 봇 실행"""
+    await application.run_polling(drop_pending_updates=True)
+
 @app.get("/health")
 def health():
     return {"status": "alive", "time": datetime.datetime.now(datetime.timezone.utc).isoformat()}
 
-# 5. 명령어 핸들러
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id != OWNER_ID:
         await update.message.reply_text("⚫️ Ø•Σ𝗤†∆ IS A COMMAND.")
         return
-    await update.message.reply_text("⚫️ Ø𝗫•Σ𝗤†∆.")
+    await update.message.reply_text("⚫️ Ø𝗫•Σ𝗤†.")
 
 async def time_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id != OWNER_ID:
-        await update.message.reply_text("⚫️ Ø𝗫•Σ𝗩𝗤†∆ IS A COMMAND.")
+        await update.message.reply_text("⚫️ Ø•Σ𝗤†∆ IS A COMMAND.")
         return
     
     now_utc = datetime.datetime.now(datetime.timezone.utc)
     tz_list = [
         ("KST", "대한민국", "Asia/Seoul", "🇰🇷", "UTC +09:00"),
-        ("JST", "도쿄", "Asia/Tokyo", "🇯🇵", "UTC +09:00"),
-        ("GST", "두바이", "Asia/Dubai", "🇦🇪", "UTC +04:00"),
+        ("JST", "도쿄", "Asia/Tokyo", "🇯", "UTC +09:00"),
+        ("GST", "두바이", "Asia/Dubai", "🇦", "UTC +04:00"),
         ("MSK", "모스크바", "Europe/Moscow", "🇷", "UTC +03:00"),
-        ("EST", "뉴욕", "America/New_York", "🇺", "UTC -05:00"),
+        ("EST", "뉴욕", "America/New_York", "🇺🇸", "UTC -05:00"),
         ("GMT", "런던", "Europe/London", "🇬🇧", "UTC +00:00"),
         ("CET", "파리", "Europe/Paris", "🇫🇷", "UTC +01:00"),
         ("BRT", "브라질", "America/Sao_Paulo", "🇧🇷", "UTC -03:00"),
-        ("SGT", "싱가포르", "Asia/Singapore", "🇸🇬", "UTC +08:00"),
+        ("SGT", "싱가포르", "Asia/Singapore", "🇸", "UTC +08:00"),
         ("AEST", "호주", "Australia/Sydney", "🇦🇺", "UTC +10:00"),
         ("HKT", "홍콩", "Asia/Hong_Kong", "🇭", "UTC +08:00"),
     ]
@@ -91,7 +89,6 @@ async def time_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
     await update.message.reply_text("\n".join(lines))
 
-# 6. FastAPI 서버 실행
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
