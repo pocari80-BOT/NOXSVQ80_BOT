@@ -1,5 +1,5 @@
 import os
-import asyncio
+import threading
 import datetime
 from zoneinfo import ZoneInfo
 from telegram import Update
@@ -10,24 +10,6 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 OWNER_ID = 7958659939
 
 app = FastAPI()
-
-@app.on_event("startup")
-async def startup_event():
-    print("⚫️ 𝗡Ø𝗫•Σ𝗩𝗤†∆ SERVER IS RUNNING.")
-    
-    # 봇 생성
-    application = Application.builder().token(BOT_TOKEN).build()
-    application.add_handler(CommandHandler("start", start_command))
-    application.add_handler(CommandHandler("현재시간", time_command))
-    
-    print("⚫️ 𝗡Ø𝗫•Σ𝗩𝗤†∆ IS RUNNING NORMALLY.")
-    
-    # 백그라운드에서 polling 실행 (PTB 20.6 권장 방식)
-    asyncio.create_task(run_bot(application))
-
-async def run_bot(application):
-    """텔레그램 봇 실행"""
-    await application.run_polling(drop_pending_updates=True)
 
 @app.get("/health")
 def health():
@@ -89,7 +71,24 @@ async def time_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
     await update.message.reply_text("\n".join(lines))
 
+def run_telegram_bot():
+    """텔레그램 봇 실행 (스레드용)"""
+    print("⚫️ Ø𝗫•Σ𝗩𝗤†∆ 봇 시작...")
+    try:
+        application = Application.builder().token(BOT_TOKEN).build()
+        application.add_handler(CommandHandler("start", start_command))
+        application.add_handler(CommandHandler("현재시간", time_command))
+        print("⚫️ Ø𝗫•Σ𝗩𝗤†∆ 정상 실행 중 입니다.")
+        application.run_polling(drop_pending_updates=True)
+    except Exception as e:
+        print(f"⚫️ Ø𝗫•Σ𝗩𝗤†∆ ERROR: {e}")
+
 if __name__ == "__main__":
+    # 봇을 별도 스레드에서 실행
+    threading.Thread(target=run_telegram_bot, daemon=True).start()
+    
+    # FastAPI 서버 실행
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
+    print(f"⚫️ Ø𝗫•Σ𝗩𝗤†∆ 서버 시작 (포트: {port})")
     uvicorn.run(app, host="0.0.0.0", port=port)
