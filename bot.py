@@ -8,63 +8,59 @@ from fastapi import FastAPI
 
 # 1. 설정
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
-OWNER_ID = 7958659939  # 본인 텔레그램 숫자 ID
+OWNER_ID = 7958659939
 
-# 2. FastAPI 앱
+# 2. FastAPI 앱 생성
 app = FastAPI()
-
-# 3. 텔레그램 앱 전역 변수
 telegram_app = None
 
-async def start_telegram_bot():
-    """비동기로 텔레그램 봇 실행"""
-    global telegram_app
-    
-    try:
-        print("⚫️ 𝗡Ø𝗫•Σ𝗩𝗤†∆ 봇 초기화 중...")
-        
-        # 봇 애플리케이션 빌드
-        telegram_app = Application.builder().token(BOT_TOKEN).build()
-        
-        # 명령어 핸들러 등록
-        telegram_app.add_handler(CommandHandler("start", start_command))
-        telegram_app.add_handler(CommandHandler("현재시간", time_command))
-        
-        print("⚫️ 𝗡Ø𝗫•Σ𝗩𝗤†∆ 정상 실행 중 입니다.")
-        
-        # 비동기 폴링 실행 (Render 호환)
-        await telegram_app.initialize()
-        await telegram_app.start()
-        await telegram_app.updater.start_polling(drop_pending_updates=True)
-        
-    except Exception as e:
-        print(f"⚫️ 𝗡Ø𝗫•Σ𝗩𝗤†∆ ERROR: {e}")
-
+# 3. 서버 시작 시 봇 실행
 @app.on_event("startup")
 async def startup_event():
-    """서버 시작 시 봇 실행"""
-    print(" ⚫️ 𝗡Ø𝗫•Σ𝗩𝗤†∆ 서버 실행 완료 입니다.")
-    asyncio.create_task(start_telegram_bot())
+    global telegram_app
+    print("⚫️ Ø𝗫•Σ𝗩𝗤†∆ SERVER IS RUNNING.")
+    
+    telegram_app = Application.builder().token(BOT_TOKEN).build()
+    telegram_app.add_handler(CommandHandler("start", start_command))
+    telegram_app.add_handler(CommandHandler("현재시간", time_command))
+    
+    print("⚫️ Ø𝗫•Σ𝗤†∆ IS RUNNING NORMALLY.")
+    
+    # PTB v20+ 공식 권장: 백그라운드 태스크로 polling 실행
+    asyncio.create_task(telegram_app.run_polling(drop_pending_updates=True))
 
+# 4. UptimeRobot 상태 확인
 @app.get("/health")
 def health():
     return {"status": "alive", "time": datetime.datetime.now(datetime.timezone.utc).isoformat()}
 
-def format_world_time():
-    now_utc = datetime.datetime.now(datetime.timezone.utc)
+# 5. 명령어 핸들러
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id != OWNER_ID:
+        await update.message.reply_text("⚫️ Ø•Σ𝗤†∆ IS A COMMAND.")
+        return
+    await update.message.reply_text("⚫️ Ø𝗫•Σ𝗤†∆.")
+
+async def time_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id != OWNER_ID:
+        await update.message.reply_text("⚫️ Ø𝗫•Σ𝗩𝗤†∆ IS A COMMAND.")
+        return
     
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
     tz_list = [
         ("KST", "대한민국", "Asia/Seoul", "🇰🇷", "UTC +09:00"),
         ("JST", "도쿄", "Asia/Tokyo", "🇯🇵", "UTC +09:00"),
         ("GST", "두바이", "Asia/Dubai", "🇦🇪", "UTC +04:00"),
-        ("MSK", "모스크바", "Europe/Moscow", "🇷🇺", "UTC +03:00"),
-        ("EST", "뉴욕", "America/New_York", "🇺🇸", "UTC -05:00"),
+        ("MSK", "모스크바", "Europe/Moscow", "🇷", "UTC +03:00"),
+        ("EST", "뉴욕", "America/New_York", "🇺", "UTC -05:00"),
         ("GMT", "런던", "Europe/London", "🇬🇧", "UTC +00:00"),
         ("CET", "파리", "Europe/Paris", "🇫🇷", "UTC +01:00"),
         ("BRT", "브라질", "America/Sao_Paulo", "🇧🇷", "UTC -03:00"),
         ("SGT", "싱가포르", "Asia/Singapore", "🇸🇬", "UTC +08:00"),
         ("AEST", "호주", "Australia/Sydney", "🇦🇺", "UTC +10:00"),
-        ("HKT", "홍콩", "Asia/Hong_Kong", "🇭🇰", "UTC +08:00"),
+        ("HKT", "홍콩", "Asia/Hong_Kong", "🇭", "UTC +08:00"),
     ]
     
     lines = []
@@ -93,26 +89,9 @@ def format_world_time():
             lines.append(f"  🗓 현 재 날 짜 : {date_str} [{weekday_kr}]")
             lines.append(f"  ⏰ 현 재 시 간 : {time_str}")
             
-    return "\n".join(lines)
+    await update.message.reply_text("\n".join(lines))
 
-async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """/start 명령어"""
-    user_id = update.effective_user.id
-    if user_id != OWNER_ID:
-        await update.message.reply_text("⚫️ 𝗡Ø𝗫•Σ𝗩𝗤†∆ 명령어 입니다.")
-        return
-    await update.message.reply_text("⚫️ 𝗡Ø𝗫•Σ𝗩𝗤†∆.")
-
-async def time_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """/현재시간 명령어"""
-    user_id = update.effective_user.id
-    if user_id != OWNER_ID:
-        await update.message.reply_text("⚫️ 𝗡Ø𝗫•Σ𝗩𝗤†∆ 명령어 입니다.")
-        return
-    
-    msg = format_world_time()
-    await update.message.reply_text(msg)
-
+# 6. FastAPI 서버 실행
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
